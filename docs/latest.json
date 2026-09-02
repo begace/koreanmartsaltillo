@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "packageName": "com.koreanmarket.localpos",
+  "versionName": "1.1.5",
+  "versionCode": 7,
+  "minimumSupportedVersionCode": 6,
+  "publishedAt": "2026-09-02T18:20:51Z",
+  "notesEs": "POS Local MX 1.1.5: venta rápida, lector integrado, carrito mejorado y canal de actualización seguro.",
+  "notesKo": "POS Local MX 1.1.5: 빠른 판매, 내장 바코드 스캐너, 개선된 장바구니와 안전한 업데이트 채널.",
+  "pos": {
+    "assetName": "POS-Local-MX.apk",
+    "downloadUrl": "https://github.com/begace/koreanmartsaltillo/releases/download/v1.1.5/POS-Local-MX.apk",
+    "sha256": "61a9c637ae24fd18818ab7284474f58c3681129102fbacf907045f05b85b8278",
+    "sizeBytes": 25589971
+  },
+  "updater": {
+    "assetName": "POS-Update-Helper.apk",
+    "downloadUrl": "https://github.com/begace/koreanmartsaltillo/releases/download/v1.1.5/POS-Update-Helper.apk",
+    "sha256": "442c6a8408be85973508e709c85b04d5a33cd1265f5e931af686f5899e45002b",
+    "sizeBytes": 1650546
+  }
+}

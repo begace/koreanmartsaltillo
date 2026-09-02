@@ -1,0 +1,22 @@
+# This repository is an allow-list. Distribution binaries and store data never belong in Git.
+*
+
+!.gitignore
+!README.md
+
+!docs/
+!docs/.nojekyll
+!docs/index.html
+!docs/styles.css
+!docs/privacy.html
+!docs/latest.json
+!docs/latest.json.sig
+
+!release-notes/
+!release-notes/*.md
+
+!scripts/
+!scripts/*.sh
+
+!templates/
+!templates/latest.json.template

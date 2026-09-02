@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "packageName": "com.koreanmarket.localpos",
+  "versionName": "{{VERSION_NAME}}",
+  "versionCode": {{VERSION_CODE}},
+  "minimumSupportedVersionCode": {{MINIMUM_VERSION_CODE}},
+  "publishedAt": "{{PUBLISHED_AT_UTC}}",
+  "notesEs": "{{NOTES_ES}}",
+  "notesKo": "{{NOTES_KO}}",
+  "pos": {
+    "assetName": "POS-Local-MX.apk",
+    "downloadUrl": "https://github.com/begace/koreanmartsaltillo/releases/download/v{{VERSION_NAME}}/POS-Local-MX.apk",
+    "sha256": "{{POS_SHA256}}",
+    "sizeBytes": {{POS_SIZE_BYTES}}
+  },
+  "updater": {
+    "assetName": "POS-Update-Helper.apk",
+    "downloadUrl": "https://github.com/begace/koreanmartsaltillo/releases/download/v{{VERSION_NAME}}/POS-Update-Helper.apk",
+    "sha256": "{{UPDATER_SHA256}}",
+    "sizeBytes": {{UPDATER_SIZE_BYTES}}
+  }
+}
