@@ -45,18 +45,19 @@ the bytes addressed by an older signed manifest.
 
 The update manifest uses a dedicated RSA key. This is **not** the Android APK signing JKS.
 Create and retain it outside this public staging directory. The default script path is
-`../release-signing/update-manifest-private.pem`.
+`../../release-signing/update-manifest-private.pem`.
 
 ```bash
-mkdir -p ../release-signing
+mkdir -p ../../release-signing
 openssl genpkey -algorithm RSA -aes-256-cbc \
   -pkeyopt rsa_keygen_bits:3072 \
-  -out ../release-signing/update-manifest-private.pem
-chmod 600 ../release-signing/update-manifest-private.pem
+  -out ../../release-signing/update-manifest-private.pem
+chmod 600 ../../release-signing/update-manifest-private.pem
 openssl pkey \
-  -in ../release-signing/update-manifest-private.pem \
+  -in ../../release-signing/update-manifest-private.pem \
   -pubout \
-  -out ../release-signing/update-manifest-public.pem
+  -outform DER \
+  -out ../../release-signing/update-manifest-public.der
 ```
 
 Back up both the Android JKS and this RSA private key offline. Embed only the RSA **public** key
@@ -85,7 +86,7 @@ RELEASE_DIR="$(mktemp -d)"
   --helper-version-code 1 \
   --app "$RELEASE_DIR/POS-Local-MX.apk" \
   --helper "$RELEASE_DIR/POS-Update-Helper.apk" \
-  --private-key ../release-signing/update-manifest-private.pem
+  --private-key ../../release-signing/update-manifest-private.pem
 
 ./scripts/check-public-tree.sh
 ```

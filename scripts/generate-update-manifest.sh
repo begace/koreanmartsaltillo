@@ -3,8 +3,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 CHANNEL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
-DEFAULT_PRIVATE_KEY="$(cd "$CHANNEL_ROOT/.." && pwd -P)/release-signing/update-manifest-private.pem"
-PINNED_PUBLIC_KEY="$(cd "$CHANNEL_ROOT/.." && pwd -P)/release-signing/update-manifest-public.der"
+PROJECT_ROOT="$(cd "$CHANNEL_ROOT/../.." && pwd -P)"
+DEFAULT_PRIVATE_KEY="$PROJECT_ROOT/release-signing/update-manifest-private.pem"
+PINNED_PUBLIC_KEY="$PROJECT_ROOT/release-signing/update-manifest-public.der"
 PINNED_PUBLIC_KEY_SHA256="5a09306c2f87c79fe5f7c4e0bc40d3e79f37a28d96bf8cb6388d5ce6498e2571"
 
 usage() {
