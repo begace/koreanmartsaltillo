@@ -25,21 +25,45 @@ scripts/
 templates/latest.json.template
 ```
 
-Release binaries are GitHub Release assets only and are never committed to Git:
+Release binaries are never committed to Git. Current 1.1.6 APKs are hosted in the
+owner-approved Google Drive folder; older versions remain GitHub Release assets:
 
 - `POS-Local-MX.apk`
 - `POS-Update-Helper.apk`
 - `SHA256SUMS.txt`
 
-Keeping the asset names stable makes this permanent download URL possible:
+## Current release: POS 1.1.6 / helper 1.1.0
+
+- POS package `com.koreanmarket.localpos`, versionCode `8`.
+- Helper package `com.koreanmarket.localpos.updater`, versionCode `2`.
+- APK folder: https://drive.google.com/drive/folders/1an35pMpNQiBsfUxT6R5Q7r_nELrO0sM3
+- Signed metadata remains at `https://begace.github.io/koreanmartsaltillo/latest.json` and `.json.sig`.
+- Initial migration from 1.1.5 requires manually installing the new helper once, because
+  the old helper only accepts GitHub downloads. Then use the POS update button.
+- Install over the existing app, never uninstall. Android installation consent is still required.
+- This explicitly approved release bundles a 2,557-product snapshot including prices, costs
+  and numeric stock. Anyone with the APK link can extract it. Sales, backups and keys are NOT bundled.
+- Before applying that snapshot once, POS makes a verified internal backup. Existing sales,
+  payments and returns are preserved. Numeric stock is replaced; unknown stock stays unchanged.
+- Devices have no upload/login code. POS retains no INTERNET permission; the helper downloads only.
+
+Use `generate-update-manifest.sh --pos-download-url URL --helper-download-url URL
+--allow-bundled-catalog` with the normal version/APK arguments. Only the reviewed catalog pair
+is allowed; other catalogs, Excel, DB, backups and secrets remain forbidden. Anonymous Drive
+downloads use the exact `drive.usercontent.google.com/download` endpoint with `id`,
+`export=download`, and optional fixed `confirm=t`. HTML, login and error responses are rejected.
+Check both uploaded APKs anonymously before publishing the manifest and detached signature
+in one commit. After publication, never replace bytes at these Drive IDs; use new IDs for
+the next version. The helper checks signature, hash, size, package, APK signer and version.
+
+The old GitHub `latest` link below is historical and does NOT deliver the current Drive release:
 
 ```text
 https://github.com/begace/koreanmartsaltillo/releases/latest/download/POS-Local-MX.apk
 ```
 
-The website may use that `latest` link for people. The signed machine-readable manifest uses the
-version-pinned `/releases/download/vX.Y.Z/` URL so publishing a later release cannot silently change
-the bytes addressed by an older signed manifest.
+The website now uses the verified Drive file IDs. GitHub-specific instructions below describe
+the older release path and remain available for recovery, not for the current release.
 
 ## One-time update-signing key
 
@@ -63,7 +87,7 @@ openssl pkey \
 Back up both the Android JKS and this RSA private key offline. Embed only the RSA **public** key
 in the updater. Never place either private key in this repository or in a GitHub Release.
 
-## Prepare v1.1.5 without publishing
+## Historical: prepare v1.1.5 without publishing
 
 The public APK must be a generic build without the store-specific `assets/initial_products.csv`.
 The preparation script refuses an APK containing that asset.
