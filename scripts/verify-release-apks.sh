@@ -12,10 +12,14 @@ usage() {
 Usage:
   verify-release-apks.sh --version-name 1.1.5 --version-code 7 \
     --helper-version-code 1 --app /path/POS-Local-MX.apk \
-    --helper /path/POS-Update-Helper.apk
+    --helper /path/POS-Update-Helper.apk [--allow-bundled-catalog]
 
-Requires Android SDK build-tools (aapt and apksigner). JAVA_HOME must point to
-a working JDK for apksigner.
+Catalogs are rejected by default. --allow-bundled-catalog permits only the
+explicitly reviewed 2026-10-20 snapshot, verified against local private-catalog.
+It never permits databases, backups, spreadsheets, or signing secrets.
+
+Requires Android SDK tools (aapt, apksigner, apkanalyzer), xmllint and python3.
+JAVA_HOME must point to a working JDK for apksigner.
 EOF
 }
 
@@ -24,6 +28,7 @@ VERSION_CODE=""
 HELPER_VERSION_CODE=""
 APP_PATH=""
 HELPER_PATH=""
+ALLOW_BUNDLED_CATALOG=false
 
 while (($#)); do
   case "$1" in
@@ -32,6 +37,7 @@ while (($#)); do
     --helper-version-code) HELPER_VERSION_CODE="${2:-}"; shift 2 ;;
     --app) APP_PATH="${2:-}"; shift 2 ;;
     --helper) HELPER_PATH="${2:-}"; shift 2 ;;
+    --allow-bundled-catalog) ALLOW_BUNDLED_CATALOG=true; shift ;;
     --help|-h) usage; exit 0 ;;
     *) printf 'ERROR: unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
@@ -156,10 +162,79 @@ while IFS= read -r permission; do
 done < <(permission_names "$HELPER_BADGING")
 
 APP_ENTRIES="$(unzip -Z1 "$APP_PATH")"
-if grep -Eiq '(^|/)(initial_products|precio)([^/]*)$|\.(csv|xlsx|xls|posbackup|sqlite|db)$' <<< "$APP_ENTRIES"; then
-  printf 'ERROR: POS APK contains private catalog or database material.\n' >&2
-  exit 1
-fi
+command -v python3 >/dev/null || { printf 'ERROR: python3 is required for catalog/archive validation.\n' >&2; exit 1; }
+python3 - "$APP_PATH" "$HELPER_PATH" "$PROJECT_ROOT" "$ALLOW_BUNDLED_CATALOG" <<'PY'
+import csv
+import hashlib
+import io
+import json
+from pathlib import Path, PurePosixPath
+import re
+import sys
+import zipfile
+
+app_path, helper_path, project_root, allow_catalog = sys.argv[1:]
+catalog_prefix = "assets/catalog-2026-10-20/"
+catalog_files = {catalog_prefix + "catalog.csv", catalog_prefix + "manifest.json"}
+expected_catalog_sha256 = "77cb1e3c7ea33409b358347d787e7cd27eda8ee6aebef0d2dfdd2918f597b8b2"
+forbidden = re.compile(
+    r"(^|/)(initial_products|precio)[^/]*$|"
+    r"\.(csv|xlsx|xls|posbackup|sqlite|sqlite3|db|db3|db-wal|db-shm|zip|"
+    r"jks|keystore|pem|p12|pfx|key)$|"
+    r"(^|/)(keystore|local)\.properties$|"
+    r"(^|/)[^/]*(backup|private[-_]?key)[^/]*$",
+    re.IGNORECASE,
+)
+
+def fail(message):
+    raise SystemExit("ERROR: " + message)
+
+for apk_path, is_pos in ((app_path, True), (helper_path, False)):
+    with zipfile.ZipFile(apk_path) as archive:
+        entries = archive.namelist()
+        if len(entries) != len(set(entries)):
+            fail("APK contains duplicate ZIP entries.")
+        for name in entries:
+            path = PurePosixPath(name)
+            if path.is_absolute() or ".." in path.parts or "\\" in name:
+                fail("APK contains an unsafe ZIP path.")
+            if name.endswith("/"):
+                continue
+            if is_pos and allow_catalog == "true" and name in catalog_files:
+                continue
+            if name.startswith("assets/catalog-") or forbidden.search(name):
+                fail("APK contains unauthorized catalog, database, backup, or secret material: " + name)
+            if name.lower().endswith(".apk") and (not is_pos or name != "assets/POS-Update-Helper.apk"):
+                fail("APK contains an unexpected nested APK: " + name)
+        if not is_pos or allow_catalog != "true":
+            continue
+        if not catalog_files.issubset(entries):
+            fail("--allow-bundled-catalog requires both reviewed catalog assets.")
+        local_root = Path(project_root) / "private-catalog" / "catalog-2026-10-20"
+        for name in sorted(catalog_files):
+            local_path = local_root / PurePosixPath(name).name
+            if not local_path.is_file() or archive.read(name) != local_path.read_bytes():
+                fail("Bundled catalog does not exactly match the reviewed local snapshot: " + name)
+        manifest = json.loads(archive.read(catalog_prefix + "manifest.json"))
+        catalog = archive.read(catalog_prefix + "catalog.csv")
+        digest = hashlib.sha256(catalog).hexdigest()
+        if digest != expected_catalog_sha256 or manifest.get("catalogSha256") != digest:
+            fail("Bundled catalog checksum differs from the reviewed snapshot.")
+        if manifest.get("snapshotId") != "2026-10-20-v1" or manifest.get("schemaVersion") != 1:
+            fail("Bundled catalog identity/schema is not the reviewed snapshot.")
+        if manifest.get("sourceSha256") != "4959af62faa6927edb2db03b2d2cf1e73d9f98adddeed3bea923f633ed107f8c":
+            fail("Bundled catalog source fingerprint differs from the reviewed snapshot.")
+        if manifest.get("currency") != "MXN":
+            fail("Bundled catalog currency is not MXN.")
+        rows = list(csv.reader(io.StringIO(catalog.decode("utf-8-sig"), newline="")))
+        expected_header = ["barcode", "name", "category", "cost_price_minor", "sale_price_minor",
+                           "wholesale_price_minor", "stock_milli", "min_stock_milli", "max_stock_milli", "unit"]
+        if not rows or rows[0] != expected_header or any(len(row) != len(expected_header) for row in rows[1:]):
+            fail("Bundled catalog CSV has an invalid header or row shape.")
+        if manifest.get("rows") != 2557 or len(rows) - 1 != 2557:
+            fail("Bundled catalog must contain exactly 2,557 reviewed product rows.")
+        print("Verified explicitly permitted bundled catalog: 2026-10-20-v1, 2,557 rows.")
+PY
 
 if ! grep -Fxq 'assets/POS-Update-Helper.apk' <<< "$APP_ENTRIES"; then
   printf 'ERROR: POS APK does not contain assets/POS-Update-Helper.apk.\n' >&2
@@ -169,9 +244,7 @@ fi
 TEMP_HELPER="$(mktemp)"
 POS_MANIFEST="$(mktemp)"
 HELPER_MANIFEST="$(mktemp)"
-HELPER_DEX="$(mktemp)"
-HELPER_STRINGS="$(mktemp)"
-cleanup() { rm -f "$TEMP_HELPER" "$POS_MANIFEST" "$HELPER_MANIFEST" "$HELPER_DEX" "$HELPER_STRINGS"; }
+cleanup() { rm -f "$TEMP_HELPER" "$POS_MANIFEST" "$HELPER_MANIFEST"; }
 trap cleanup EXIT
 unzip -p "$APP_PATH" assets/POS-Update-Helper.apk > "$TEMP_HELPER"
 if ! cmp -s "$TEMP_HELPER" "$HELPER_PATH"; then
@@ -179,12 +252,47 @@ if ! cmp -s "$TEMP_HELPER" "$HELPER_PATH"; then
   exit 1
 fi
 
-unzip -p "$HELPER_PATH" 'classes*.dex' > "$HELPER_DEX"
-strings -a "$HELPER_DEX" > "$HELPER_STRINGS"
-if ! grep -Fxq "$EXPECTED_UPDATE_PUBLIC_KEY_BASE64" "$HELPER_STRINGS"; then
-  printf 'ERROR: updater APK does not contain the pinned update public key.\n' >&2
-  exit 1
-fi
+python3 - "$HELPER_PATH" "$EXPECTED_UPDATE_PUBLIC_KEY_BASE64" <<'PY'
+import re
+import struct
+import sys
+import zipfile
+
+# Read DEX string_ids directly; macOS /usr/bin/strings can require accepting an
+# unrelated Xcode license. Match a complete ASCII string, not a suffix or prefix.
+expected = sys.argv[2].encode("ascii")
+found = False
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    for name in archive.namelist():
+        if not re.fullmatch(r"classes(?:[0-9]+)?\.dex", name):
+            continue
+        dex = archive.read(name)
+        if len(dex) < 112 or not dex.startswith(b"dex\n"):
+            raise SystemExit("ERROR: updater APK contains an invalid DEX header.")
+        count, table_offset = struct.unpack_from("<II", dex, 56)
+        if table_offset + count * 4 > len(dex):
+            raise SystemExit("ERROR: updater APK contains an invalid DEX string table.")
+        for index in range(count):
+            cursor = struct.unpack_from("<I", dex, table_offset + index * 4)[0]
+            length = 0
+            for shift in range(0, 35, 7):
+                if cursor >= len(dex):
+                    raise SystemExit("ERROR: updater APK contains a truncated DEX string.")
+                value = dex[cursor]
+                cursor += 1
+                length |= (value & 0x7f) << shift
+                if value < 0x80:
+                    break
+            else:
+                raise SystemExit("ERROR: updater APK contains an invalid DEX string length.")
+            if length == len(expected) and dex[cursor:cursor + len(expected) + 1] == expected + b"\x00":
+                found = True
+                break
+        if found:
+            break
+if not found:
+    raise SystemExit("ERROR: updater APK does not contain the exact pinned update public key.")
+PY
 
 "$APKANALYZER" manifest print "$APP_PATH" > "$POS_MANIFEST"
 "$APKANALYZER" manifest print "$HELPER_PATH" > "$HELPER_MANIFEST"

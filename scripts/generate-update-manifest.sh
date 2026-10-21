@@ -11,13 +11,16 @@ PINNED_PUBLIC_KEY_SHA256="5a09306c2f87c79fe5f7c4e0bc40d3e79f37a28d96bf8cb6388d5c
 usage() {
   cat <<EOF
 Usage:
-  generate-update-manifest.sh --version-name 1.1.5 --version-code 115 \\
-    --minimum-supported-version-code 100 --helper-version-code 1 \\
+  generate-update-manifest.sh --version-name 1.1.6 --version-code 8 \\
+    --minimum-supported-version-code 7 --helper-version-code 2 \\
     --app /outside/POS-Local-MX.apk \\
     --helper /outside/POS-Update-Helper.apk [options]
 
 Options:
   --private-key PATH  Default: $DEFAULT_PRIVATE_KEY
+  --pos-download-url URL     Default: version-specific GitHub release asset
+  --helper-download-url URL  Default: version-specific GitHub release asset
+  --allow-bundled-catalog    Explicitly permit the reviewed 2026-10-20 catalog
   --notes-es TEXT
   --notes-ko TEXT
 
@@ -35,6 +38,9 @@ HELPER_PATH=""
 PRIVATE_KEY_PATH="$DEFAULT_PRIVATE_KEY"
 NOTES_ES=""
 NOTES_KO=""
+POS_DOWNLOAD_URL=""
+HELPER_DOWNLOAD_URL=""
+ALLOW_BUNDLED_CATALOG=false
 
 while (($#)); do
   case "$1" in
@@ -47,6 +53,9 @@ while (($#)); do
     --private-key) PRIVATE_KEY_PATH="${2:-}"; shift 2 ;;
     --notes-es) NOTES_ES="${2:-}"; shift 2 ;;
     --notes-ko) NOTES_KO="${2:-}"; shift 2 ;;
+    --pos-download-url) POS_DOWNLOAD_URL="${2:-}"; shift 2 ;;
+    --helper-download-url) HELPER_DOWNLOAD_URL="${2:-}"; shift 2 ;;
+    --allow-bundled-catalog) ALLOW_BUNDLED_CATALOG=true; shift ;;
     --help|-h) usage; exit 0 ;;
     *) printf 'ERROR: unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
@@ -64,6 +73,40 @@ done
 command -v jq >/dev/null || { printf 'ERROR: jq is required.\n' >&2; exit 1; }
 command -v openssl >/dev/null || { printf 'ERROR: openssl is required.\n' >&2; exit 1; }
 
+DOWNLOAD_BASE="https://github.com/begace/koreanmartsaltillo/releases/download/v$VERSION_NAME"
+POS_DOWNLOAD_URL="${POS_DOWNLOAD_URL:-$DOWNLOAD_BASE/POS-Local-MX.apk}"
+HELPER_DOWNLOAD_URL="${HELPER_DOWNLOAD_URL:-$DOWNLOAD_BASE/POS-Update-Helper.apk}"
+validate_download_url() {
+  local url="$1" asset="$2"
+  local drive_endpoint='https://(drive\.google\.com/uc|drive\.usercontent\.google\.com/download)'
+  local drive_id='[A-Za-z0-9_-]{10,200}'
+  if [[ "$url" == "$DOWNLOAD_BASE/$asset" ]] ||
+     [[ "$url" =~ ^${drive_endpoint}\?id=${drive_id}\&export=download$ ]] ||
+     [[ "$url" =~ ^${drive_endpoint}\?export=download\&id=${drive_id}$ ]]; then
+    return
+  fi
+  # Drive executable downloads can require this fixed public-download flag.
+  # Only usercontent /download may carry confirm=t; no arbitrary confirmation
+  # token, page-provided HTML action, or extra query parameter is accepted.
+  local confirmed_endpoint='https://drive\.usercontent\.google\.com/download'
+  local confirmed_query
+  for confirmed_query in \
+    "id=$drive_id&export=download&confirm=t" \
+    "id=$drive_id&confirm=t&export=download" \
+    "export=download&id=$drive_id&confirm=t" \
+    "export=download&confirm=t&id=$drive_id" \
+    "confirm=t&id=$drive_id&export=download" \
+    "confirm=t&export=download&id=$drive_id"; do
+    if [[ "$url" =~ ^${confirmed_endpoint}\?${confirmed_query}$ ]]; then
+      return
+    fi
+  done
+  printf 'ERROR: invalid %s URL. Use this version\x27s GitHub asset or canonical HTTPS Google Drive id/export=download; only usercontent /download may additionally use confirm=t.\n' "$asset" >&2
+  exit 2
+}
+validate_download_url "$POS_DOWNLOAD_URL" 'POS-Local-MX.apk'
+validate_download_url "$HELPER_DOWNLOAD_URL" 'POS-Update-Helper.apk'
+
 APP_PATH="$(cd "$(dirname "$APP_PATH")" && pwd -P)/$(basename "$APP_PATH")"
 HELPER_PATH="$(cd "$(dirname "$HELPER_PATH")" && pwd -P)/$(basename "$HELPER_PATH")"
 PRIVATE_KEY_PATH="$(cd "$(dirname "$PRIVATE_KEY_PATH")" && pwd -P)/$(basename "$PRIVATE_KEY_PATH")"
@@ -76,17 +119,17 @@ done
 
 unzip -tqq "$APP_PATH"
 unzip -tqq "$HELPER_PATH"
-"$SCRIPT_DIR/verify-release-apks.sh" \
+VERIFY_ARGS=(
   --version-name "$VERSION_NAME" \
   --version-code "$VERSION_CODE" \
   --helper-version-code "$HELPER_VERSION_CODE" \
   --app "$APP_PATH" \
   --helper "$HELPER_PATH"
-APP_ENTRIES="$(unzip -Z1 "$APP_PATH")"
-if grep -Eiq '(^|/)initial_products\.csv$' <<< "$APP_ENTRIES"; then
-  printf 'ERROR: POS APK contains initial_products.csv; refusing to publish store data.\n' >&2
-  exit 1
+)
+if [[ "$ALLOW_BUNDLED_CATALOG" == true ]]; then
+  VERIFY_ARGS+=(--allow-bundled-catalog)
 fi
+"$SCRIPT_DIR/verify-release-apks.sh" "${VERIFY_ARGS[@]}"
 openssl pkey -in "$PRIVATE_KEY_PATH" -noout -check >/dev/null
 PRIVATE_PUBLIC_SHA256="$(openssl pkey -in "$PRIVATE_KEY_PATH" -pubout -outform DER | shasum -a 256 | awk '{print $1}')"
 PINNED_DER_SHA256="$(shasum -a 256 "$PINNED_PUBLIC_KEY" | awk '{print $1}')"
@@ -106,7 +149,6 @@ UPDATER_SIZE="$(file_size "$HELPER_PATH")"
 PUBLISHED_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 NOTES_ES="${NOTES_ES:-Actualización de POS Local MX $VERSION_NAME. Consulta las notas de la versión antes de instalar.}"
 NOTES_KO="${NOTES_KO:-로컬 POS $VERSION_NAME 업데이트입니다. 설치 전에 릴리스 안내를 확인하세요.}"
-DOWNLOAD_BASE="https://github.com/begace/koreanmartsaltillo/releases/download/v$VERSION_NAME"
 
 TEMP_DIR="$(mktemp -d)"
 cleanup() {
@@ -123,7 +165,8 @@ jq -n \
   --arg publishedAt "$PUBLISHED_AT" \
   --arg notesEs "$NOTES_ES" \
   --arg notesKo "$NOTES_KO" \
-  --arg downloadBase "$DOWNLOAD_BASE" \
+  --arg posDownloadUrl "$POS_DOWNLOAD_URL" \
+  --arg updaterDownloadUrl "$HELPER_DOWNLOAD_URL" \
   --arg posSha256 "$POS_SHA256" \
   --argjson posSizeBytes "$POS_SIZE" \
   --arg updaterSha256 "$UPDATER_SHA256" \
@@ -131,8 +174,8 @@ jq -n \
   '{schemaVersion: 1, packageName: $packageName, versionName: $versionName,
     versionCode: $versionCode, minimumSupportedVersionCode: $minimumSupportedVersionCode,
     publishedAt: $publishedAt, notesEs: $notesEs, notesKo: $notesKo,
-    pos: {assetName: "POS-Local-MX.apk", downloadUrl: ($downloadBase + "/POS-Local-MX.apk"), sha256: $posSha256, sizeBytes: $posSizeBytes},
-    updater: {assetName: "POS-Update-Helper.apk", downloadUrl: ($downloadBase + "/POS-Update-Helper.apk"), sha256: $updaterSha256, sizeBytes: $updaterSizeBytes}}' \
+    pos: {assetName: "POS-Local-MX.apk", downloadUrl: $posDownloadUrl, sha256: $posSha256, sizeBytes: $posSizeBytes},
+    updater: {assetName: "POS-Update-Helper.apk", downloadUrl: $updaterDownloadUrl, sha256: $updaterSha256, sizeBytes: $updaterSizeBytes}}' \
   > "$TEMP_DIR/latest.json"
 
 openssl dgst -sha256 -sign "$PRIVATE_KEY_PATH" -out "$TEMP_DIR/latest.json.sig.bin" "$TEMP_DIR/latest.json"
