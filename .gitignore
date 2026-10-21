@@ -11,6 +11,8 @@
 !docs/privacy.html
 !docs/latest.json
 !docs/latest.json.sig
+!docs/latest-drive.json
+!docs/latest-drive.json.sig
 
 !release-notes/
 !release-notes/*.md
