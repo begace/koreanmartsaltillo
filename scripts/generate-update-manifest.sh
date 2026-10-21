@@ -2,6 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=release-policy.sh
+source "$SCRIPT_DIR/release-policy.sh"
 CHANNEL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 PROJECT_ROOT="$(cd "$CHANNEL_ROOT/../.." && pwd -P)"
 DEFAULT_PRIVATE_KEY="$PROJECT_ROOT/release-signing/update-manifest-private.pem"
@@ -11,21 +13,23 @@ PINNED_PUBLIC_KEY_SHA256="5a09306c2f87c79fe5f7c4e0bc40d3e79f37a28d96bf8cb6388d5c
 usage() {
   cat <<EOF
 Usage:
-  generate-update-manifest.sh --version-name 1.1.6 --version-code 8 \\
-    --minimum-supported-version-code 7 --helper-version-code 2 \\
+  generate-update-manifest.sh --version-name 1.1.5.1 --version-code 9 \\
+    --minimum-supported-version-code 7 --helper-version-code 3 \\
     --app /outside/POS-Local-MX.apk \\
     --helper /outside/POS-Update-Helper.apk [options]
 
 Options:
   --private-key PATH  Default: $DEFAULT_PRIVATE_KEY
+  --manifest-name NAME       latest (legacy GitHub bridge) or latest-drive
   --pos-download-url URL     Default: version-specific GitHub release asset
   --helper-download-url URL  Default: version-specific GitHub release asset
   --allow-bundled-catalog    Explicitly permit the reviewed 2026-10-20 catalog
   --notes-es TEXT
   --notes-ko TEXT
 
-Writes docs/latest.json and docs/latest.json.sig. The RSA private key is read in
-place and is never copied into update-channel.
+Writes docs/NAME.json and docs/NAME.json.sig (default NAME: latest). latest must
+remain the GitHub bridge. Final Drive releases use latest-drive. The RSA private
+key is read in place and is never copied into update-channel.
 EOF
 }
 
@@ -41,6 +45,7 @@ NOTES_KO=""
 POS_DOWNLOAD_URL=""
 HELPER_DOWNLOAD_URL=""
 ALLOW_BUNDLED_CATALOG=false
+MANIFEST_NAME=latest
 
 while (($#)); do
   case "$1" in
@@ -51,6 +56,7 @@ while (($#)); do
     --app) APP_PATH="${2:-}"; shift 2 ;;
     --helper) HELPER_PATH="${2:-}"; shift 2 ;;
     --private-key) PRIVATE_KEY_PATH="${2:-}"; shift 2 ;;
+    --manifest-name) MANIFEST_NAME="${2:-}"; shift 2 ;;
     --notes-es) NOTES_ES="${2:-}"; shift 2 ;;
     --notes-ko) NOTES_KO="${2:-}"; shift 2 ;;
     --pos-download-url) POS_DOWNLOAD_URL="${2:-}"; shift 2 ;;
@@ -61,7 +67,8 @@ while (($#)); do
   esac
 done
 
-[[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { printf 'ERROR: invalid --version-name.\n' >&2; exit 2; }
+release_manifest_name_valid "$MANIFEST_NAME" || { printf 'ERROR: --manifest-name must be latest or latest-drive.\n' >&2; exit 2; }
+release_version_name_valid "$VERSION_NAME" || { printf 'ERROR: invalid --version-name.\n' >&2; exit 2; }
 [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { printf 'ERROR: --version-code must be positive.\n' >&2; exit 2; }
 [[ "$MINIMUM_SUPPORTED_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { printf 'ERROR: minimum supported version code must be positive.\n' >&2; exit 2; }
 [[ "$HELPER_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { printf 'ERROR: helper version code must be positive.\n' >&2; exit 2; }
@@ -76,36 +83,8 @@ command -v openssl >/dev/null || { printf 'ERROR: openssl is required.\n' >&2; e
 DOWNLOAD_BASE="https://github.com/begace/koreanmartsaltillo/releases/download/v$VERSION_NAME"
 POS_DOWNLOAD_URL="${POS_DOWNLOAD_URL:-$DOWNLOAD_BASE/POS-Local-MX.apk}"
 HELPER_DOWNLOAD_URL="${HELPER_DOWNLOAD_URL:-$DOWNLOAD_BASE/POS-Update-Helper.apk}"
-validate_download_url() {
-  local url="$1" asset="$2"
-  local drive_endpoint='https://(drive\.google\.com/uc|drive\.usercontent\.google\.com/download)'
-  local drive_id='[A-Za-z0-9_-]{10,200}'
-  if [[ "$url" == "$DOWNLOAD_BASE/$asset" ]] ||
-     [[ "$url" =~ ^${drive_endpoint}\?id=${drive_id}\&export=download$ ]] ||
-     [[ "$url" =~ ^${drive_endpoint}\?export=download\&id=${drive_id}$ ]]; then
-    return
-  fi
-  # Drive executable downloads can require this fixed public-download flag.
-  # Only usercontent /download may carry confirm=t; no arbitrary confirmation
-  # token, page-provided HTML action, or extra query parameter is accepted.
-  local confirmed_endpoint='https://drive\.usercontent\.google\.com/download'
-  local confirmed_query
-  for confirmed_query in \
-    "id=$drive_id&export=download&confirm=t" \
-    "id=$drive_id&confirm=t&export=download" \
-    "export=download&id=$drive_id&confirm=t" \
-    "export=download&confirm=t&id=$drive_id" \
-    "confirm=t&id=$drive_id&export=download" \
-    "confirm=t&export=download&id=$drive_id"; do
-    if [[ "$url" =~ ^${confirmed_endpoint}\?${confirmed_query}$ ]]; then
-      return
-    fi
-  done
-  printf 'ERROR: invalid %s URL. Use this version\x27s GitHub asset or canonical HTTPS Google Drive id/export=download; only usercontent /download may additionally use confirm=t.\n' "$asset" >&2
-  exit 2
-}
-validate_download_url "$POS_DOWNLOAD_URL" 'POS-Local-MX.apk'
-validate_download_url "$HELPER_DOWNLOAD_URL" 'POS-Update-Helper.apk'
+release_route_valid "$MANIFEST_NAME" "$VERSION_NAME" "$VERSION_CODE" "$HELPER_VERSION_CODE" \
+  "$ALLOW_BUNDLED_CATALOG" "$POS_DOWNLOAD_URL" "$HELPER_DOWNLOAD_URL" || exit 2
 
 APP_PATH="$(cd "$(dirname "$APP_PATH")" && pwd -P)/$(basename "$APP_PATH")"
 HELPER_PATH="$(cd "$(dirname "$HELPER_PATH")" && pwd -P)/$(basename "$HELPER_PATH")"
@@ -184,8 +163,8 @@ openssl dgst -sha256 -verify "$PINNED_PUBLIC_KEY" -keyform DER \
 openssl base64 -A -in "$TEMP_DIR/latest.json.sig.bin" -out "$TEMP_DIR/latest.json.sig"
 printf '\n' >> "$TEMP_DIR/latest.json.sig"
 
-install -m 0644 "$TEMP_DIR/latest.json" "$CHANNEL_ROOT/docs/latest.json"
-install -m 0644 "$TEMP_DIR/latest.json.sig" "$CHANNEL_ROOT/docs/latest.json.sig"
+install -m 0644 "$TEMP_DIR/latest.json" "$CHANNEL_ROOT/docs/$MANIFEST_NAME.json"
+install -m 0644 "$TEMP_DIR/latest.json.sig" "$CHANNEL_ROOT/docs/$MANIFEST_NAME.json.sig"
 "$SCRIPT_DIR/check-public-tree.sh"
 
-printf 'Signed update manifest written to docs/latest.json and docs/latest.json.sig\n'
+printf 'Signed update manifest written to docs/%s.json and docs/%s.json.sig\n' "$MANIFEST_NAME" "$MANIFEST_NAME"

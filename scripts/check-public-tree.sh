@@ -17,12 +17,25 @@ required_files=(
   "scripts/prepare-release.sh"
   "scripts/generate-update-manifest.sh"
   "scripts/verify-release-apks.sh"
+  "scripts/release-policy.sh"
+  "scripts/test-release-policy.sh"
 )
 
 for relative_path in "${required_files[@]}"; do
   if [[ ! -f "$CHANNEL_ROOT/$relative_path" ]]; then
     printf 'ERROR: required public file is missing: %s\n' "$relative_path" >&2
     exit 1
+  fi
+done
+
+# Each published channel must be accompanied by its detached signature. Only
+# these two names are supported by the clients and release generator.
+for manifest_name in latest latest-drive; do
+  manifest_path="$CHANNEL_ROOT/docs/$manifest_name.json"
+  if [[ -e "$manifest_path" || -e "$manifest_path.sig" ]]; then
+    [[ -f "$manifest_path" && -f "$manifest_path.sig" ]] || {
+      printf 'ERROR: %s manifest/signature pair is incomplete.\n' "$manifest_name" >&2; exit 1;
+    }
   fi
 done
 

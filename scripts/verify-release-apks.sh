@@ -2,6 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=release-policy.sh
+source "$SCRIPT_DIR/release-policy.sh"
 CHANNEL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 PROJECT_ROOT="$(cd "$CHANNEL_ROOT/../.." && pwd -P)"
 EXPECTED_SIGNER_SHA256="5dca2229ef7332cdeb1a10b78e8fc95252e799f57b44de923dd75e7bad73e7f4"
@@ -43,7 +45,7 @@ while (($#)); do
   esac
 done
 
-[[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { printf 'ERROR: invalid --version-name.\n' >&2; exit 2; }
+release_version_name_valid "$VERSION_NAME" || { printf 'ERROR: invalid --version-name.\n' >&2; exit 2; }
 [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { printf 'ERROR: invalid --version-code.\n' >&2; exit 2; }
 [[ "$HELPER_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { printf 'ERROR: invalid --helper-version-code.\n' >&2; exit 2; }
 [[ -f "$APP_PATH" ]] || { printf 'ERROR: POS APK not found.\n' >&2; exit 2; }
@@ -113,7 +115,13 @@ verify_identity() {
 }
 
 POS_BADGING="$(verify_identity "$APP_PATH" 'com.koreanmarket.localpos' "$VERSION_CODE" "$VERSION_NAME" 'POS APK')"
-HELPER_BADGING="$(verify_identity "$HELPER_PATH" 'com.koreanmarket.localpos.updater' "$HELPER_VERSION_CODE" '' 'updater APK')"
+EXPECTED_HELPER_VERSION_NAME=""
+case "$HELPER_VERSION_CODE" in
+  1) EXPECTED_HELPER_VERSION_NAME=1.0.0 ;;
+  2) EXPECTED_HELPER_VERSION_NAME=1.1.0 ;;
+  3) EXPECTED_HELPER_VERSION_NAME=1.1.1 ;;
+esac
+HELPER_BADGING="$(verify_identity "$HELPER_PATH" 'com.koreanmarket.localpos.updater' "$HELPER_VERSION_CODE" "$EXPECTED_HELPER_VERSION_NAME" 'updater APK')"
 
 permission_names() {
   printf '%s\n' "$1" | sed -n "s/^uses-permission: name='\([^']*\)'.*/\1/p"

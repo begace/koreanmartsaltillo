@@ -2,6 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+# shellcheck source=release-policy.sh
+source "$SCRIPT_DIR/release-policy.sh"
 CHANNEL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 
 usage() {
@@ -9,7 +11,8 @@ usage() {
 Usage:
   prepare-release.sh --version v1.1.5 --version-code 7 --helper-version-code 1 \
     --app /path/to/app.apk \
-    --helper /path/to/updater.apk --output /path/outside/update-channel/release
+    --helper /path/to/updater.apk --output /path/outside/update-channel/release \
+    [--allow-bundled-catalog]
 
 Creates, outside the public staging tree:
   POS-Local-MX.apk
@@ -24,6 +27,7 @@ HELPER_VERSION_CODE=""
 APP_PATH=""
 HELPER_PATH=""
 OUTPUT_DIR=""
+ALLOW_BUNDLED_CATALOG=false
 
 while (($#)); do
   case "$1" in
@@ -33,12 +37,13 @@ while (($#)); do
     --app) APP_PATH="${2:-}"; shift 2 ;;
     --helper) HELPER_PATH="${2:-}"; shift 2 ;;
     --output) OUTPUT_DIR="${2:-}"; shift 2 ;;
+    --allow-bundled-catalog) ALLOW_BUNDLED_CATALOG=true; shift ;;
     --help|-h) usage; exit 0 ;;
     *) printf 'ERROR: unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
 done
 
-[[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { printf 'ERROR: --version must look like v1.1.5.\n' >&2; exit 2; }
+[[ "$VERSION" == v* ]] && release_version_name_valid "${VERSION#v}" || { printf 'ERROR: --version must look like v1.1.5 or v1.1.5.1.\n' >&2; exit 2; }
 [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { printf 'ERROR: --version-code must be positive.\n' >&2; exit 2; }
 [[ "$HELPER_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { printf 'ERROR: --helper-version-code must be positive.\n' >&2; exit 2; }
 [[ -f "$APP_PATH" ]] || { printf 'ERROR: POS APK not found: %s\n' "$APP_PATH" >&2; exit 2; }
@@ -62,12 +67,17 @@ fi
 unzip -tqq "$APP_PATH"
 unzip -tqq "$HELPER_PATH"
 
-"$SCRIPT_DIR/verify-release-apks.sh" \
+VERIFY_ARGS=( \
   --version-name "${VERSION#v}" \
   --version-code "$VERSION_CODE" \
   --helper-version-code "$HELPER_VERSION_CODE" \
   --app "$APP_PATH" \
-  --helper "$HELPER_PATH"
+  --helper "$HELPER_PATH" \
+)
+if [[ "$ALLOW_BUNDLED_CATALOG" == true ]]; then
+  VERIFY_ARGS+=(--allow-bundled-catalog)
+fi
+"$SCRIPT_DIR/verify-release-apks.sh" "${VERIFY_ARGS[@]}"
 
 APP_ENTRIES="$(unzip -Z1 "$APP_PATH")"
 if grep -Eiq '(^|/)initial_products\.csv$' <<< "$APP_ENTRIES"; then
