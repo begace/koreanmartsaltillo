@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
   "packageName": "com.koreanmarket.localpos",
-  "versionName": "1.1.6",
-  "versionCode": 8,
+  "versionName": "1.1.5.1",
+  "versionCode": 9,
   "minimumSupportedVersionCode": 7,
-  "publishedAt": "2026-10-21T04:49:39Z",
-  "notesEs": "Catálogo autorizado de 2,557 productos, precios y existencias numéricas aplicado una sola vez con respaldo previo; conserva ventas. Instala primero el actualizador 1.1.0 para descargar desde Drive. No desinstales el POS.",
-  "notesKo": "승인된 상품 2,557개·가격·숫자 재고를 사전 백업 후 한 번 적용하고 판매 기록을 보존합니다. Drive 전환은 업데이트 도우미 1.1.0을 처음 한 번 직접 설치하세요. 기존 POS를 삭제하지 마세요.",
+  "publishedAt": "2026-10-21T05:20:09Z",
+  "notesEs": "Paso 1 de 2: instala 1.1.5.1 y vuelve a abrir POS. Continúa la actualización para obtener 1.1.6 desde Google Drive. No desinstales la app.",
+  "notesKo": "1/2 단계: 1.1.5.1 설치 후 POS를 다시 열고 다음 업데이트를 계속하면 Drive의 1.1.6으로 업데이트됩니다. 기존 앱을 삭제하지 마세요.",
   "pos": {
     "assetName": "POS-Local-MX.apk",
-    "downloadUrl": "https://drive.usercontent.google.com/download?export=download&id=1tcTLwHlF0HD3b8x3YfEgwHhh3w94JA1D&confirm=t",
-    "sha256": "7214755ede49ab18d5d049e46268cd3daeb9c7daa5507611cc51893fe0dce544",
-    "sizeBytes": 25660055
+    "downloadUrl": "https://github.com/begace/koreanmartsaltillo/releases/download/v1.1.5.1/POS-Local-MX.apk",
+    "sha256": "5e92131aa44dd04a4069d52f72119955c2e7199df718d63b5226f8d0abd8e4af",
+    "sizeBytes": 25634455
   },
   "updater": {
     "assetName": "POS-Update-Helper.apk",
-    "downloadUrl": "https://drive.usercontent.google.com/download?export=download&id=1qjUUaDa74Si8hnHTTA6boDACblyIwi_c&confirm=t",
-    "sha256": "9bbd9da2c5d1768e2581a216c12ec9aa25a5af7d43b5b8480c1e6773c4174f28",
-    "sizeBytes": 1650557
+    "downloadUrl": "https://github.com/begace/koreanmartsaltillo/releases/download/v1.1.5.1/POS-Update-Helper.apk",
+    "sha256": "34a98deb8d2d5424a708cc8dd6b5f3e75a9d271d11b30164151a7209e0310088",
+    "sizeBytes": 1650538
   }
 }

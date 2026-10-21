@@ -32,16 +32,17 @@
           dispositivo Android. Sin cuenta, sin nube y sin conexión obligatoria.
         </p>
         <div class="actions">
-          <a class="button primary" href="https://drive.usercontent.google.com/download?export=download&amp;id=1tcTLwHlF0HD3b8x3YfEgwHhh3w94JA1D&amp;confirm=t">
-            Descargar POS Local
+          <a class="button primary" href="https://github.com/begace/koreanmartsaltillo/releases/download/v1.1.5.1/POS-Local-MX.apk">
+            Descargar puente 1.1.5.1
           </a>
-          <a class="button secondary" href="https://drive.usercontent.google.com/download?export=download&amp;id=1qjUUaDa74Si8hnHTTA6boDACblyIwi_c&amp;confirm=t">
-            Descargar actualizador
+          <a class="button secondary" href="https://drive.usercontent.google.com/download?export=download&amp;id=1uIz10wlkmeZNhfyTDQyqiA43W_4c37R-&amp;confirm=t">
+            Descargar versión final 1.1.6 de Drive
           </a>
         </div>
         <p class="release-note">
-          POS 1.1.6 · Actualizador 1.1.0 · Android 8.0 o posterior ·
-          <a href="./latest.json">versión y SHA-256</a>
+          1.1.5 → 1.1.5.1 → 1.1.6 · Actualizador 1.1.1 · Android 8.0 o posterior ·
+          <a href="./latest.json">puente / SHA-256</a> ·
+          <a href="./latest-drive.json">versión final / SHA-256</a>
         </p>
       </div>
       <aside class="status-card" aria-label="Características principales">
@@ -64,21 +65,24 @@
     </section>
 
     <section id="instalacion" class="section steps" aria-labelledby="install-title">
-      <div><p class="eyebrow">INSTALACIÓN</p><h2 id="install-title">Tres pasos y listo</h2></div>
+      <div><p class="eyebrow">ACTUALIZACIÓN DESDE 1.1.5</p><h2 id="install-title">Actualiza desde el botón del POS</h2></div>
       <ol>
-        <li><strong>Descarga</strong><span>Obtén el APK desde esta página.</span></li>
-        <li><strong>Autoriza</strong><span>Permite instalar apps desde tu navegador o gestor de archivos.</span></li>
-        <li><strong>Abre</strong><span>Esta versión aplica una vez el catálogo autorizado de 2,557 productos, con respaldo previo.</span></li>
+        <li><strong>Instala 1.1.5.1</strong><span>En POS 1.1.5, pulsa actualizar e instala el puente desde GitHub.</span></li>
+        <li><strong>Abre de nuevo</strong><span>Sigue el aviso del POS y confirma la instalación del actualizador 1.1.1 que ya viene incluido.</span></li>
+        <li><strong>Instala 1.1.6</strong><span>Continúa con el aviso de actualización para descargar la versión final desde Drive.</span></li>
       </ol>
       <p class="warning">
         Conserva siempre un respaldo fuera del teléfono. Para actualizar, instala el APK nuevo sobre
         la versión existente; no desinstales la app, porque Android eliminaría sus datos locales.
       </p>
-      <p>Si tienes POS 1.1.5, instala primero el actualizador 1.1.0 sobre el anterior.
-        Después usa el botón de actualización del POS. Android solicitará confirmar la instalación.
-        Las descargas ahora están en Google Drive; la información firmada sigue en GitHub Pages.</p>
-      <p>El catálogo incluido actualiza los precios y las existencias numéricas una sola vez;
-        conserva ventas, pagos y devoluciones. No borres los datos de la app.</p>
+      <p>No necesitas buscar ni descargar un APK del actualizador por separado. Android sí pide
+        autorizar y confirmar las instalaciones; no se instalan en silencio. Si cancelas, puedes
+        continuar desde Configuración → Actualización de la app.</p>
+      <p>El puente 1.1.5.1 no incluye catálogo. Solo la versión final 1.1.6 (código 10) aplica
+        los 2,557 productos autorizados una vez, con respaldo previo. Actualiza precios y existencias
+        numéricas y conserva ventas, pagos y devoluciones. No borres los datos de la app.</p>
+      <p>La instalación, reapertura y conservación de datos aún no se han probado en un dispositivo
+        Android físico; requieren verificación en el equipo de la tienda.</p>
     </section>
 
     <section id="korean" class="section korean" lang="ko" aria-labelledby="korean-title">
@@ -86,18 +90,22 @@
       <h2 id="korean-title">정전 중에도 사용할 수 있는 Android 로컬 POS</h2>
       <p>
         서버와 회원가입 없이 판매, 바코드 스캔, 장바구니, 재고, 날짜별 정산과 백업을 처리합니다.
-        이번 버전은 승인된 상품 2,557개를 포함합니다. 적용 전에 내부 DB를 백업하고,
+        최종 1.1.6에만 승인된 상품 2,557개가 포함됩니다. 적용 전에 내부 DB를 백업하고,
         상품·가격과 숫자로 명시된 재고를 한 번 갱신하며 판매·결제·반품 기록을 보존합니다.
       </p>
       <p>
         업데이트할 때 기존 앱을 삭제하지 말고 새 APK를 그대로 설치하세요. 앱을 삭제하면 기기에
         저장된 로컬 데이터도 삭제됩니다.
       </p>
-      <p>기존 1.1.5 사용자는 위의 업데이트 도우미 1.1.0을 처음 한 번 덮어 설치한 뒤,
-        POS의 업데이트 버튼을 사용하세요. 또는 POS 1.1.6을 직접 덮어 설치하고 설정 → 앱 업데이트에서
-        새 도우미를 설치할 수 있습니다. Android의 설치 확인은 직접 눌러야 합니다.</p>
-      <p>APK는 Google Drive, 서명된 버전 정보는 GitHub Pages에서 내려받습니다.
-        이 APK에 포함된 상품명·가격·원가·재고는 링크를 가진 사람이 추출할 수 있습니다.
+      <p><strong>기존 POS 업데이트 버튼 → GitHub 1.1.5.1 설치 → POS 다시 열기 →
+        내장 도우미 1.1.1 설치 확인 → Drive 1.1.6 업데이트</strong> 순서입니다.
+        도우미 APK를 따로 찾아 다운로드할 필요가 없습니다. Android의 설치 허용·확인은 직접 눌러야 합니다.
+        취소했다면 설정 → 앱 업데이트에서 이어갈 수 있습니다.</p>
+      <p>1.1.5.1에는 상품정보가 없습니다. 최종 1.1.6은 내부 버전 코드 10이며,
+        이전에 게시한 코드 8 파일은 보존합니다. 실물 Android 기기의 설치·재실행·데이터 보존 시험은
+        아직 수행하지 않았으므로 매장 기기에서 확인이 필요합니다.</p>
+      <p>브리지 APK는 GitHub, 최종 APK는 Google Drive, 서명된 버전 정보는 GitHub Pages에서 내려받습니다.
+        최종 APK에 포함된 상품명·가격·원가·재고는 링크를 가진 사람이 추출할 수 있습니다.
         기기의 판매 기록이나 백업을 외부로 전송하는 기능은 없습니다.</p>
     </section>
   </main>

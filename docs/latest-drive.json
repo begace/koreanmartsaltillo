@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "packageName": "com.koreanmarket.localpos",
+  "versionName": "1.1.6",
+  "versionCode": 10,
+  "minimumSupportedVersionCode": 7,
+  "publishedAt": "2026-10-21T05:20:12Z",
+  "notesEs": "Paso 2 de 2: POS 1.1.6. Catálogo autorizado de 2,557 productos; respaldo interno antes de aplicarlo una sola vez. Conserva ventas. No desinstales la app.",
+  "notesKo": "2/2 단계: POS 1.1.6 최종 업데이트입니다. 승인된 상품 2,557개는 내부 백업 후 한 번 적용하며 판매 기록은 보존합니다. 기존 앱을 삭제하지 마세요.",
+  "pos": {
+    "assetName": "POS-Local-MX.apk",
+    "downloadUrl": "https://drive.usercontent.google.com/download?export=download&id=1uIz10wlkmeZNhfyTDQyqiA43W_4c37R-&confirm=t",
+    "sha256": "86ca88bd3a8865e1bbf19f80ab411e09fa4562328c8eca288ea1651987420bd9",
+    "sizeBytes": 25682510
+  },
+  "updater": {
+    "assetName": "POS-Update-Helper.apk",
+    "downloadUrl": "https://drive.usercontent.google.com/download?export=download&id=1OlasLvGkAKa-2rpA2ImsQ5k6aP_abPvy&confirm=t",
+    "sha256": "34a98deb8d2d5424a708cc8dd6b5f3e75a9d271d11b30164151a7209e0310088",
+    "sizeBytes": 1650538
+  }
+}
